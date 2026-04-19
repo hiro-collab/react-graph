@@ -159,10 +159,12 @@ textarea {
 }
 
 .viewer-surface {
-  aspect-ratio: 16 / 9;
   width: 100%;
+  display: block;
+  aspect-ratio: 1 / 1;
   border-radius: 8px;
   border: 1px solid #353a38;
+  background: #111213;
 }
 
 .viewer-overlay {
@@ -207,9 +209,10 @@ textarea {
   border-color: #5fc2aa;
 }
 
-.source-chip__swatch {
-  width: 24px;
-  height: 24px;
+.source-chip__preview {
+  width: 40px;
+  flex: 0 0 40px;
+  aspect-ratio: 1 / 1;
   border-radius: 4px;
   border: 1px solid rgba(255, 255, 255, 0.15);
 }
@@ -280,12 +283,36 @@ textarea {
   word-break: break-word;
 }
 
+.graph-node__preview {
+  margin-top: 0.6rem;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: 6px;
+  border: 1px solid #2f3532;
+  background: #111213;
+}
+
 .graph-node__swatch {
   width: 18px;
   height: 18px;
   flex: 0 0 18px;
   border-radius: 4px;
   border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.image-preview {
+  position: relative;
+  width: 100%;
+}
+
+.image-preview__empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8c9590;
+  font-size: 0.8rem;
 }
 
 @media (max-width: 960px) {

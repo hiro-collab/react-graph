@@ -12,7 +12,9 @@ import {
 import "@xyflow/react/dist/style.css";
 import sampleGraph from "../graphs/sample.graph.json";
 import tdProjectGraph from "../graphs/touchdesigner-project1.graph.json";
+import tdProjectGraphLevel2 from "../graphs/touchdesigner-project1-level2.graph.json";
 import GraphNode from "./components/GraphNode";
+import ImagePreview from "./components/ImagePreview";
 import { evaluateGraph } from "./lib/dataflowEngine";
 import {
   fromFlowGraph,
@@ -24,6 +26,7 @@ import {
 } from "./lib/portableGraph";
 
 const STORAGE_KEY = "react-flow-test.portable-graph.v2";
+const DEFAULT_GRAPH = tdProjectGraphLevel2;
 const nodeTypes = {
   portableNode: GraphNode,
 };
@@ -32,13 +35,13 @@ function loadGraph() {
   const raw = window.localStorage.getItem(STORAGE_KEY);
 
   if (!raw) {
-    return normalizePortableGraph(tdProjectGraph);
+    return normalizePortableGraph(DEFAULT_GRAPH);
   }
 
   try {
     return normalizePortableGraph(JSON.parse(raw));
   } catch {
-    return normalizePortableGraph(tdProjectGraph);
+    return normalizePortableGraph(DEFAULT_GRAPH);
   }
 }
 
@@ -52,7 +55,7 @@ export default function App() {
   const fileInputRef = useRef(null);
   const simulation = useMemo(() => evaluateGraph(graph, elapsedMs / 1000), [elapsedMs, graph]);
   const flowGraph = useMemo(() => toFlowGraph(graph, simulation), [graph, simulation]);
-  const outputPreview = simulation.primaryOutput?.swatch ?? "rgba(24, 24, 24, 1)";
+  const outputImage = simulation.primaryOutput?.image ?? null;
 
   useEffect(() => {
     if (!isPlaying) {
@@ -133,7 +136,7 @@ export default function App() {
   }, [graph, persist]);
 
   const resetGraph = useCallback(() => {
-    persist(normalizePortableGraph(tdProjectGraph));
+    persist(normalizePortableGraph(DEFAULT_GRAPH));
     setSelectedNodeId(null);
     setElapsedMs(0);
     setStatus("Reset to sample graph");
@@ -216,14 +219,14 @@ export default function App() {
   const selectedInputIndex = simulation.nodeStates.switch1?.selectedIndex ?? 0;
   const sourcePreviews = [
     {
-      id: "constant1",
+      id: "thresh1",
       label: "input0",
-      swatch: simulation.nodeStates.constant1?.swatch ?? "rgba(24, 24, 24, 1)",
+      image: simulation.nodeStates.thresh1?.image ?? null,
     },
     {
-      id: "constant2",
+      id: "thresh2",
       label: "input1",
-      swatch: simulation.nodeStates.constant2?.swatch ?? "rgba(24, 24, 24, 1)",
+      image: simulation.nodeStates.thresh2?.image ?? null,
     },
   ];
 
@@ -257,7 +260,10 @@ export default function App() {
 
         <div className="sidebar-section button-row">
           <button type="button" onClick={() => loadPreset(tdProjectGraph, "TD /project1 preset")}>
-            Load TD preset
+            Load TD L1
+          </button>
+          <button type="button" onClick={() => loadPreset(tdProjectGraphLevel2, "TD /project1 level2")}>
+            Load TD L2
           </button>
           <button type="button" onClick={() => loadPreset(sampleGraph, "basic sample")}>
             Load sample
@@ -316,7 +322,7 @@ export default function App() {
           </div>
           <div className="viewer-card">
             <div className="viewer-card__label">null_img_out</div>
-            <div className="viewer-surface" style={{ background: outputPreview }} />
+            <ImagePreview image={outputImage} className="viewer-surface" />
           </div>
           <div className="source-strip">
             {sourcePreviews.map((source, index) => (
@@ -324,7 +330,7 @@ export default function App() {
                 key={source.id}
                 className={`source-chip ${selectedInputIndex === index ? "source-chip--active" : ""}`}
               >
-                <div className="source-chip__swatch" style={{ background: source.swatch }} />
+                <ImagePreview image={source.image} className="source-chip__preview" />
                 <div>{source.label}</div>
               </div>
             ))}
@@ -397,7 +403,7 @@ export default function App() {
           <Panel position="top-right" className="viewer-overlay">
             <div className="viewer-card viewer-card--overlay">
               <div className="viewer-card__label">TOP Viewer</div>
-              <div className="viewer-surface viewer-surface--overlay" style={{ background: outputPreview }} />
+              <ImagePreview image={outputImage} className="viewer-surface viewer-surface--overlay" />
               <div className="viewer-caption">{switchState}</div>
             </div>
           </Panel>

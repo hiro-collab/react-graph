@@ -112,6 +112,7 @@ export function toFlowGraph(portableGraph, runtime = {}) {
         operator: node.meta?.operator,
         summary: runtime.nodeStates?.[node.id]?.summary ?? "",
         swatch: runtime.nodeStates?.[node.id]?.swatch ?? null,
+        preview: runtime.nodeStates?.[node.id]?.image ?? null,
       },
     })),
     edges: portableGraph.edges.map((edge) => ({

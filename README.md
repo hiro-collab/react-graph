@@ -2,7 +2,7 @@
 
 このディレクトリは、構造をグラフとして眺めて編集しつつ、JSON を本体データとして持ち出せる最小実験場です。
 
-現在は TouchDesigner の `/project1` にある小さな構成を、React Flow 上で再現するテストも含みます。
+現在は TouchDesigner の `/project1` にある構成を、React Flow 上で段階的に再現するテストも含みます。
 
 ## 目的
 
@@ -15,7 +15,9 @@
 - `graphs/sample.graph.json`
   - 持ち出し前提のサンプルデータ
 - `graphs/touchdesigner-project1.graph.json`
-  - TouchDesigner `/project1` の再現用プリセット
+  - TouchDesigner `/project1` の level 1 再現用プリセット
+- `graphs/touchdesigner-project1-level2.graph.json`
+  - TouchDesigner `/project1` の level 2 再現用プリセット
 - `graphs/portable-graph.schema.json`
   - JSON Schema
 - `src/lib/portableGraph.js`
@@ -32,7 +34,7 @@ npm run dev
 
 ブラウザで JSON を直接貼り替えるか、`Download JSON` で保存して、別ツール側の変換に回せます。
 
-`Load TD preset` を押すと、TouchDesigner の現在の `/project1` 構成を再現したプリセットを読み込みます。
+`Load TD L1` と `Load TD L2` で、TouchDesigner `/project1` の再現プリセットを切り替えられます。
 
 ## TouchDesigner 再現の対象
 
@@ -42,8 +44,12 @@ MCP で確認した `/project1` は、主に次の流れです。
   - `square`, `frequency=0.5`, `offset=0.5`, `amp=0.5`
 - `null_switch_ctrl` (`nullCHOP`)
   - `lfo1` の値を受ける
+- `noise1` (`noiseTOP`)
+  - `simplex3d`, `256x256`, `tz=absTime.seconds`
+- `thresh1`, `thresh2` (`thresholdTOP`)
+  - `noise1` をしきい値で 2 系統に分ける
 - `switch1` (`switchTOP`)
-  - `constant1` と `constant2` を `index` で切り替える
+  - 2つの threshold 出力を `index` で切り替える
 - `null_img_out` (`nullTOP`)
   - 切替結果の出力
 - `null_switch_ctrl_export` (`tableDAT`)
@@ -53,9 +59,13 @@ MCP で確認した `/project1` は、主に次の流れです。
 
 ## 今回の到達点
 
-- 赤と緑の定数画像を切り替える
-- `null_img_out` 相当のビューアで現在の出力色を表示する
-- `LFO -> switch index -> output` の状態を確認できる
+- level 1
+  - 赤と緑の定数画像を切り替える
+- level 2
+  - `noiseTOP` 相当のモノクロ画像を生成する
+  - `thresholdTOP` 2系統を切り替える
+  - `null_img_out` 相当のビューアで現在の出力画像を表示する
+  - `LFO -> switch index -> output` の状態を確認できる
 
 TOP/CHOP/DAT を TouchDesigner の演算系ごと再現しているわけではなく、今回の構成に必要な処理だけを絞って持ち込んでいます。
 
