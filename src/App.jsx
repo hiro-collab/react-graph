@@ -10,12 +10,10 @@ import {
   applyNodeChanges,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import sampleGraph from "../graphs/sample.graph.json";
-import tdProjectGraph from "../graphs/touchdesigner-project1.graph.json";
-import tdProjectGraphLevel2 from "../graphs/touchdesigner-project1-level2.graph.json";
 import GraphNode from "./components/GraphNode.jsx";
 import ImagePreview from "./components/ImagePreview.jsx";
 import { evaluateGraph } from "./lib/dataflowEngine.js";
+import { createEmptyGraphDocument } from "./lib/graphDocument.js";
 import {
   createNodeFromType,
   getNodeVisual,
@@ -30,8 +28,7 @@ import {
   toJson,
 } from "./lib/portableGraph.js";
 
-const STORAGE_KEY = "react-flow-test.portable-graph.v3";
-const DEFAULT_GRAPH = sampleGraph;
+const STORAGE_KEY = "react-flow-test.portable-graph.v4";
 const nodeTypes = {
   portableNode: GraphNode,
 };
@@ -41,13 +38,13 @@ function loadGraph() {
   const raw = window.localStorage.getItem(STORAGE_KEY);
 
   if (!raw) {
-    return normalizePortableGraph(DEFAULT_GRAPH);
+    return normalizePortableGraph(createEmptyGraphDocument("Untitled Graph"));
   }
 
   try {
     return normalizePortableGraph(JSON.parse(raw));
   } catch {
-    return normalizePortableGraph(DEFAULT_GRAPH);
+    return normalizePortableGraph(createEmptyGraphDocument("Untitled Graph"));
   }
 }
 
@@ -142,10 +139,10 @@ export default function App() {
   );
 
   const resetGraph = useCallback(() => {
-    persist(normalizePortableGraph(DEFAULT_GRAPH));
+    persist(normalizePortableGraph(createEmptyGraphDocument("Untitled Graph")));
     setSelectedNodeId(null);
     setElapsedMs(0);
-    setStatus("Reset to default graph");
+    setStatus("Created empty graph");
   }, [persist]);
 
   const applyJson = useCallback(() => {
@@ -203,16 +200,6 @@ export default function App() {
     [persist],
   );
 
-  const loadPreset = useCallback(
-    (preset, label) => {
-      persist(normalizePortableGraph(preset));
-      setElapsedMs(0);
-      setSelectedNodeId(null);
-      setStatus(`Loaded ${label}`);
-    },
-    [persist],
-  );
-
   const selectedNode = useMemo(
     () => graph.nodes.find((node) => node.id === selectedNodeId) ?? null,
     [graph.nodes, selectedNodeId],
@@ -222,14 +209,8 @@ export default function App() {
   const primaryOutputLabel = simulation.primaryOutputNode?.label ?? "Primary output";
   const primaryOutputSummary = simulation.primaryOutput?.summary ?? "no output";
   const outputImage = simulation.primaryOutput?.image ?? null;
-  const firstSignalNode = graph.nodes.find((node) => simulation.nodeStates[node.id]?.valueType === "signal") ?? null;
-  const firstSignalSummary = firstSignalNode ? simulation.nodeStates[firstSignalNode.id]?.summary : "n/a";
-  const firstSwitchNode = graph.nodes.find((node) => node.type === "logic.switch") ?? null;
-  const firstSwitchState = firstSwitchNode ? simulation.nodeStates[firstSwitchNode.id] : null;
-  const switchSummary = firstSwitchState?.summary ?? "n/a";
-  const sourcePreviews = firstSwitchState?.inputStates ?? [];
-  const firstTableNode = graph.nodes.find((node) => simulation.nodeStates[node.id]?.valueType === "table") ?? null;
-  const exportTable = firstTableNode ? simulation.nodeStates[firstTableNode.id]?.text ?? "" : "";
+  const selectedImage = selectedState?.image ?? null;
+  const graphStats = `${graph.nodes.length} nodes / ${graph.edges.length} edges`;
 
   const updateSelectedLabel = useCallback(
     (label) => {
@@ -255,24 +236,18 @@ export default function App() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="sidebar-section">
-          <h1>Typed Graph Playground</h1>
-          <p>graph document, node registry, runtime を分けて汎用システムへ寄せる実験場。</p>
+          <h1>Typed Graph Tool</h1>
+          <p>typed graph document と node registry を使う汎用グラフエディタ。</p>
         </div>
 
         <div className="sidebar-section">
-          <div className="section-heading">Presets</div>
+          <div className="section-heading">Document</div>
           <div className="button-row">
-            <button type="button" onClick={() => loadPreset(sampleGraph, "generic sample")}>
-              Load sample
+            <button type="button" onClick={resetGraph}>
+              New graph
             </button>
-            <button type="button" onClick={() => loadPreset(tdProjectGraph, "TD level1")}>
-              Load TD L1
-            </button>
-            <button type="button" onClick={() => loadPreset(tdProjectGraphLevel2, "TD level2")}>
-              Load TD L2
-            </button>
-            <button type="button" className="secondary" onClick={resetGraph}>
-              Reset
+            <button type="button" className="secondary" onClick={syncJson}>
+              Sync text
             </button>
           </div>
         </div>
@@ -297,9 +272,6 @@ export default function App() {
           </button>
           <button type="button" onClick={applyJson}>
             Apply JSON
-          </button>
-          <button type="button" onClick={syncJson}>
-            Sync text
           </button>
           <input
             ref={fileInputRef}
@@ -330,33 +302,16 @@ export default function App() {
           <div className="runtime-grid">
             <div>Time</div>
             <div>{(elapsedMs / 1000).toFixed(1)}s</div>
-            <div>Signal</div>
-            <div>{firstSignalSummary}</div>
-            <div>Switch</div>
-            <div>{switchSummary}</div>
+            <div>Graph</div>
+            <div>{graphStats}</div>
+            <div>Output</div>
+            <div>{primaryOutputSummary}</div>
           </div>
           <div className="viewer-card">
             <div className="viewer-card__label">{primaryOutputLabel}</div>
             <ImagePreview image={outputImage} className="viewer-surface" emptyLabel="No image output" />
             <div className="viewer-caption">{primaryOutputSummary}</div>
           </div>
-          {sourcePreviews.length ? (
-            <div className="source-strip">
-              {sourcePreviews.map((source) => (
-                <div
-                  key={`${source.nodeId}-${source.port}`}
-                  className={`source-chip ${firstSwitchState?.selectedIndex === source.index ? "source-chip--active" : ""}`}
-                >
-                  <ImagePreview image={source.image} className="source-chip__preview" emptyLabel="No image" />
-                  <div>
-                    <div>{source.port}</div>
-                    <div className="source-chip__summary">{source.nodeId}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : null}
-          {exportTable ? <pre className="export-table">{exportTable}</pre> : null}
         </div>
 
         <div className="sidebar-section">
@@ -393,6 +348,7 @@ export default function App() {
                 value={selectedNode.label}
                 onChange={(event) => updateSelectedLabel(event.target.value)}
               />
+              {selectedImage ? <ImagePreview image={selectedImage} className="selected-preview" emptyLabel="No image" /> : null}
               <div className="hint">{selectedState?.summary ?? "no runtime state"}</div>
             </div>
           ) : (
