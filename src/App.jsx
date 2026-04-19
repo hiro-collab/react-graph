@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Background,
   Controls,
@@ -11,6 +11,9 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import sampleGraph from "../graphs/sample.graph.json";
+import tdProjectGraph from "../graphs/touchdesigner-project1.graph.json";
+import GraphNode from "./components/GraphNode";
+import { evaluateGraph } from "./lib/dataflowEngine";
 import {
   fromFlowGraph,
   nextNodeId,
@@ -20,19 +23,22 @@ import {
   toJson,
 } from "./lib/portableGraph";
 
-const STORAGE_KEY = "react-flow-test.graph";
+const STORAGE_KEY = "react-flow-test.portable-graph.v2";
+const nodeTypes = {
+  portableNode: GraphNode,
+};
 
 function loadGraph() {
   const raw = window.localStorage.getItem(STORAGE_KEY);
 
   if (!raw) {
-    return normalizePortableGraph(sampleGraph);
+    return normalizePortableGraph(tdProjectGraph);
   }
 
   try {
     return normalizePortableGraph(JSON.parse(raw));
   } catch {
-    return normalizePortableGraph(sampleGraph);
+    return normalizePortableGraph(tdProjectGraph);
   }
 }
 
@@ -41,9 +47,25 @@ export default function App() {
   const [jsonText, setJsonText] = useState(() => toJson(loadGraph()));
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [status, setStatus] = useState("Ready");
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [elapsedMs, setElapsedMs] = useState(0);
   const fileInputRef = useRef(null);
+  const simulation = useMemo(() => evaluateGraph(graph, elapsedMs / 1000), [elapsedMs, graph]);
+  const flowGraph = useMemo(() => toFlowGraph(graph, simulation), [graph, simulation]);
+  const outputPreview = simulation.primaryOutput?.swatch ?? "rgba(24, 24, 24, 1)";
 
-  const flowGraph = useMemo(() => toFlowGraph(graph), [graph]);
+  useEffect(() => {
+    if (!isPlaying) {
+      return undefined;
+    }
+
+    const startedAt = performance.now() - elapsedMs;
+    const interval = window.setInterval(() => {
+      setElapsedMs(performance.now() - startedAt);
+    }, 100);
+
+    return () => window.clearInterval(interval);
+  }, [elapsedMs, isPlaying]);
 
   const persist = useCallback((nextGraph) => {
     setGraph(nextGraph);
@@ -96,7 +118,11 @@ export default function App() {
             x: 160 + graph.nodes.length * 40,
             y: 80 + graph.nodes.length * 28,
           },
-          meta: {},
+          meta: {
+            family: "GENERIC",
+            operator: "process",
+            processor: "passthrough",
+          },
         },
       ],
     });
@@ -107,8 +133,9 @@ export default function App() {
   }, [graph, persist]);
 
   const resetGraph = useCallback(() => {
-    persist(normalizePortableGraph(sampleGraph));
+    persist(normalizePortableGraph(tdProjectGraph));
     setSelectedNodeId(null);
+    setElapsedMs(0);
     setStatus("Reset to sample graph");
   }, [persist]);
 
@@ -116,6 +143,7 @@ export default function App() {
     try {
       const parsed = normalizePortableGraph(JSON.parse(jsonText));
       persist(parsed);
+      setElapsedMs(0);
       setStatus("Applied JSON");
     } catch (error) {
       setStatus(error.message);
@@ -156,6 +184,7 @@ export default function App() {
       try {
         const parsed = normalizePortableGraph(JSON.parse(await file.text()));
         persist(parsed);
+        setElapsedMs(0);
         setStatus(`Loaded ${file.name}`);
       } catch (error) {
         setStatus(error.message);
@@ -166,10 +195,37 @@ export default function App() {
     [persist],
   );
 
+  const loadPreset = useCallback(
+    (preset, label) => {
+      persist(normalizePortableGraph(preset));
+      setElapsedMs(0);
+      setSelectedNodeId(null);
+      setStatus(`Loaded ${label}`);
+    },
+    [persist],
+  );
+
   const selectedNode = useMemo(
     () => graph.nodes.find((node) => node.id === selectedNodeId) ?? null,
     [graph.nodes, selectedNodeId],
   );
+  const selectedState = selectedNode ? simulation.nodeStates[selectedNode.id] : null;
+  const exportTable = simulation.nodeStates.null_switch_ctrl_export?.text ?? "";
+  const switchState = simulation.nodeStates.switch1?.summary ?? "n/a";
+  const lfoState = simulation.nodeStates.lfo1?.summary ?? "n/a";
+  const selectedInputIndex = simulation.nodeStates.switch1?.selectedIndex ?? 0;
+  const sourcePreviews = [
+    {
+      id: "constant1",
+      label: "input0",
+      swatch: simulation.nodeStates.constant1?.swatch ?? "rgba(24, 24, 24, 1)",
+    },
+    {
+      id: "constant2",
+      label: "input1",
+      swatch: simulation.nodeStates.constant2?.swatch ?? "rgba(24, 24, 24, 1)",
+    },
+  ];
 
   const updateSelectedLabel = useCallback(
     (label) => {
@@ -196,10 +252,16 @@ export default function App() {
       <aside className="sidebar">
         <div className="sidebar-section">
           <h1>Graph Playground</h1>
-          <p>可搬な graph JSON を本体にして、React Flow で編集する実験場。</p>
+          <p>TouchDesigner の小さな dataflow を graph JSON と React Flow で再現する実験場。</p>
         </div>
 
         <div className="sidebar-section button-row">
+          <button type="button" onClick={() => loadPreset(tdProjectGraph, "TD /project1 preset")}>
+            Load TD preset
+          </button>
+          <button type="button" onClick={() => loadPreset(sampleGraph, "basic sample")}>
+            Load sample
+          </button>
           <button type="button" onClick={addNode}>
             Add node
           </button>
@@ -225,6 +287,49 @@ export default function App() {
             onChange={importFile}
             hidden
           />
+        </div>
+
+        <div className="sidebar-section runtime-panel">
+          <div className="section-heading">Runtime</div>
+          <div className="button-row compact-row">
+            <button type="button" onClick={() => setIsPlaying((value) => !value)}>
+              {isPlaying ? "Pause" : "Play"}
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => {
+                setElapsedMs(0);
+                setStatus("Time reset");
+              }}
+            >
+              Reset time
+            </button>
+          </div>
+          <div className="runtime-grid">
+            <div>Time</div>
+            <div>{(elapsedMs / 1000).toFixed(1)}s</div>
+            <div>LFO</div>
+            <div>{lfoState}</div>
+            <div>Switch</div>
+            <div>{switchState}</div>
+          </div>
+          <div className="viewer-card">
+            <div className="viewer-card__label">null_img_out</div>
+            <div className="viewer-surface" style={{ background: outputPreview }} />
+          </div>
+          <div className="source-strip">
+            {sourcePreviews.map((source, index) => (
+              <div
+                key={source.id}
+                className={`source-chip ${selectedInputIndex === index ? "source-chip--active" : ""}`}
+              >
+                <div className="source-chip__swatch" style={{ background: source.swatch }} />
+                <div>{source.label}</div>
+              </div>
+            ))}
+          </div>
+          <pre className="export-table">{exportTable}</pre>
         </div>
 
         <div className="sidebar-section">
@@ -253,11 +358,15 @@ export default function App() {
           {selectedNode ? (
             <div className="node-editor">
               <div className="node-meta">{selectedNode.id}</div>
+              <div className="node-meta">
+                {[selectedNode.meta?.family, selectedNode.meta?.operator].filter(Boolean).join(" / ")}
+              </div>
               <input
                 type="text"
                 value={selectedNode.label}
                 onChange={(event) => updateSelectedLabel(event.target.value)}
               />
+              <div className="hint">{selectedState?.summary ?? "no runtime state"}</div>
             </div>
           ) : (
             <div className="hint">ノードを選ぶとラベルを直接編集できます。</div>
@@ -275,6 +384,7 @@ export default function App() {
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           fitView
+          nodeTypes={nodeTypes}
           onNodeClick={(_, node) => setSelectedNodeId(node.id)}
           onPaneClick={() => setSelectedNodeId(null)}
         >
@@ -282,7 +392,14 @@ export default function App() {
           <Controls />
           <Background gap={16} />
           <Panel position="top-left" className="flow-tip">
-            Portable graph v{graph.schemaVersion}
+            TD recreation / v{graph.schemaVersion}
+          </Panel>
+          <Panel position="top-right" className="viewer-overlay">
+            <div className="viewer-card viewer-card--overlay">
+              <div className="viewer-card__label">TOP Viewer</div>
+              <div className="viewer-surface viewer-surface--overlay" style={{ background: outputPreview }} />
+              <div className="viewer-caption">{switchState}</div>
+            </div>
           </Panel>
         </ReactFlow>
       </main>

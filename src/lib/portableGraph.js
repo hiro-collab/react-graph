@@ -76,14 +76,42 @@ export function normalizePortableGraph(value) {
   };
 }
 
-export function toFlowGraph(portableGraph) {
+function edgeStyle(meta) {
+  const dataType = meta?.dataType;
+
+  if (dataType === "signal") {
+    return {
+      stroke: "#5fc2aa",
+      strokeDasharray: "6 4",
+    };
+  }
+
+  if (dataType === "image") {
+    return {
+      stroke: "#f08b72",
+    };
+  }
+
+  return {
+    stroke: "#8c9590",
+  };
+}
+
+export function toFlowGraph(portableGraph, runtime = {}) {
   return {
     nodes: portableGraph.nodes.map((node) => ({
       id: node.id,
-      type: nodeKindToFlowType(node.kind),
+      type: "portableNode",
       position: node.position,
+      sourcePosition: "right",
+      targetPosition: "left",
       data: {
         label: node.label,
+        kind: node.kind,
+        family: node.meta?.family,
+        operator: node.meta?.operator,
+        summary: runtime.nodeStates?.[node.id]?.summary ?? "",
+        swatch: runtime.nodeStates?.[node.id]?.swatch ?? null,
       },
     })),
     edges: portableGraph.edges.map((edge) => ({
@@ -92,6 +120,7 @@ export function toFlowGraph(portableGraph) {
       target: edge.to,
       label: edge.label || undefined,
       animated: Boolean(edge.meta?.animated),
+      style: edgeStyle(edge.meta),
     })),
   };
 }

@@ -1,0 +1,176 @@
+{
+  "schemaVersion": 1,
+  "title": "TouchDesigner /project1 recreation",
+  "nodes": [
+    {
+      "id": "lfo1",
+      "kind": "process",
+      "label": "lfo1",
+      "position": { "x": 80, "y": 240 },
+      "meta": {
+        "family": "CHOP",
+        "operator": "lfoCHOP",
+        "processor": "lfo",
+        "params": {
+          "waveType": "square",
+          "frequency": 0.5,
+          "offset": 0.5,
+          "amp": 0.5,
+          "phase": 0
+        }
+      }
+    },
+    {
+      "id": "null_switch_ctrl",
+      "kind": "process",
+      "label": "null_switch_ctrl",
+      "position": { "x": 280, "y": 240 },
+      "meta": {
+        "family": "CHOP",
+        "operator": "nullCHOP",
+        "processor": "passthrough"
+      }
+    },
+    {
+      "id": "null_switch_ctrl_export",
+      "kind": "process",
+      "label": "null_switch_ctrl_export",
+      "position": { "x": 280, "y": 80 },
+      "meta": {
+        "family": "DAT",
+        "operator": "tableDAT",
+        "processor": "exportTable",
+        "params": {
+          "targetPath": "switch1",
+          "targetParameter": "index",
+          "channelName": "chan1"
+        }
+      }
+    },
+    {
+      "id": "constant1",
+      "kind": "entry",
+      "label": "constant1",
+      "position": { "x": 480, "y": 240 },
+      "meta": {
+        "family": "TOP",
+        "operator": "constantTOP",
+        "processor": "constantColor",
+        "params": {
+          "color": [255, 0, 0, 255]
+        }
+      }
+    },
+    {
+      "id": "constant2",
+      "kind": "entry",
+      "label": "constant2",
+      "position": { "x": 480, "y": 80 },
+      "meta": {
+        "family": "TOP",
+        "operator": "constantTOP",
+        "processor": "constantColor",
+        "params": {
+          "color": [0, 255, 0, 255]
+        }
+      }
+    },
+    {
+      "id": "switch1",
+      "kind": "process",
+      "label": "switch1",
+      "position": { "x": 720, "y": 180 },
+      "meta": {
+        "family": "TOP",
+        "operator": "switchTOP",
+        "processor": "switch"
+      }
+    },
+    {
+      "id": "null_img_out",
+      "kind": "exit",
+      "label": "null_img_out",
+      "position": { "x": 980, "y": 180 },
+      "meta": {
+        "family": "TOP",
+        "operator": "nullTOP",
+        "processor": "passthrough",
+        "primaryOutput": true
+      }
+    },
+    {
+      "id": "TouchDesignerAPI",
+      "kind": "note",
+      "label": "TouchDesignerAPI",
+      "position": { "x": 40, "y": 420 },
+      "meta": {
+        "family": "COMP",
+        "operator": "baseCOMP",
+        "processor": "annotation",
+        "notes": "MCP bridge component present in the running TouchDesigner project."
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "lfo1-null_switch_ctrl",
+      "from": "lfo1",
+      "to": "null_switch_ctrl",
+      "label": "chan1",
+      "meta": {
+        "dataType": "signal",
+        "animated": true
+      }
+    },
+    {
+      "id": "null_switch_ctrl-switch1",
+      "from": "null_switch_ctrl",
+      "to": "switch1",
+      "label": "index",
+      "meta": {
+        "dataType": "signal",
+        "targetPort": "index",
+        "animated": true
+      }
+    },
+    {
+      "id": "null_switch_ctrl-null_switch_ctrl_export",
+      "from": "null_switch_ctrl",
+      "to": "null_switch_ctrl_export",
+      "label": "export",
+      "meta": {
+        "dataType": "signal",
+        "animated": true
+      }
+    },
+    {
+      "id": "constant1-switch1",
+      "from": "constant1",
+      "to": "switch1",
+      "label": "input0",
+      "meta": {
+        "dataType": "image",
+        "targetSlot": 0
+      }
+    },
+    {
+      "id": "constant2-switch1",
+      "from": "constant2",
+      "to": "switch1",
+      "label": "input1",
+      "meta": {
+        "dataType": "image",
+        "targetSlot": 1
+      }
+    },
+    {
+      "id": "switch1-null_img_out",
+      "from": "switch1",
+      "to": "null_img_out",
+      "label": "image",
+      "meta": {
+        "dataType": "image"
+      }
+    }
+  ]
+}
