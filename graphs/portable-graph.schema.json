@@ -8,7 +8,7 @@
   "properties": {
     "schemaVersion": {
       "type": "integer",
-      "const": 1
+      "const": 2
     },
     "title": {
       "type": "string"
@@ -18,9 +18,13 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "label", "position"],
+        "required": ["id", "type", "label", "ui"],
         "properties": {
           "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "type": {
             "type": "string",
             "minLength": 1
           },
@@ -31,7 +35,7 @@
           "label": {
             "type": "string"
           },
-          "position": {
+          "ui": {
             "type": "object",
             "additionalProperties": false,
             "required": ["x", "y"],
@@ -39,6 +43,9 @@
               "x": { "type": "number" },
               "y": { "type": "number" }
             }
+          },
+          "params": {
+            "type": "object"
           },
           "meta": {
             "type": "object"
@@ -58,12 +65,34 @@
             "minLength": 1
           },
           "from": {
-            "type": "string",
-            "minLength": 1
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["node", "port"],
+            "properties": {
+              "node": {
+                "type": "string",
+                "minLength": 1
+              },
+              "port": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
           },
           "to": {
-            "type": "string",
-            "minLength": 1
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["node", "port"],
+            "properties": {
+              "node": {
+                "type": "string",
+                "minLength": 1
+              },
+              "port": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
           },
           "label": {
             "type": "string"

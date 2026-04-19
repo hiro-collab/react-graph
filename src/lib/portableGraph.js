@@ -1,31 +1,57 @@
+import { createNodeFromType, getNodeVisual, resolveLegacyNodeType } from "./nodeRegistry.js";
+
 const DEFAULT_TITLE = "Untitled Graph";
 
 function asObject(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};
 }
 
-function nodeKindToFlowType(kind) {
-  if (kind === "entry") {
-    return "input";
-  }
-
-  if (kind === "exit") {
-    return "output";
-  }
-
-  return undefined;
+function normalizeMeta(rawMeta) {
+  const source = asObject(rawMeta);
+  const { params, processor, ...rest } = source;
+  return rest;
 }
 
-function flowTypeToNodeKind(type, fallbackKind) {
-  if (type === "input") {
-    return "entry";
+function normalizeUi(node) {
+  const ui = asObject(node.ui);
+  const position = asObject(node.position);
+
+  return {
+    x: Number(ui.x ?? position.x ?? 0),
+    y: Number(ui.y ?? position.y ?? 0),
+  };
+}
+
+function inferInputPort(edgeSource) {
+  if (typeof edgeSource?.meta?.targetPort === "string" && edgeSource.meta.targetPort) {
+    return edgeSource.meta.targetPort;
   }
 
-  if (type === "output") {
-    return "exit";
+  if (typeof edgeSource?.meta?.targetSlot === "number") {
+    return `input${edgeSource.meta.targetSlot}`;
   }
 
-  return fallbackKind ?? "process";
+  return "in";
+}
+
+function normalizeEndpoint(endpoint, fallbackPort) {
+  if (typeof endpoint === "string") {
+    return {
+      node: endpoint,
+      port: fallbackPort,
+    };
+  }
+
+  const source = asObject(endpoint);
+
+  if (!source.node) {
+    throw new Error("Edge endpoint requires a node.");
+  }
+
+  return {
+    node: String(source.node),
+    port: String(source.port ?? fallbackPort),
+  };
 }
 
 export function normalizePortableGraph(value) {
@@ -38,7 +64,7 @@ export function normalizePortableGraph(value) {
   }
 
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     title: typeof value.title === "string" && value.title.trim() ? value.title.trim() : DEFAULT_TITLE,
     nodes: value.nodes.map((node) => {
       const source = asObject(node);
@@ -47,28 +73,29 @@ export function normalizePortableGraph(value) {
         throw new Error("Every node needs an id.");
       }
 
-      return {
+      const type = resolveLegacyNodeType(source);
+      const created = createNodeFromType(type, {
         id: String(source.id),
-        kind: typeof source.kind === "string" ? source.kind : "process",
         label: typeof source.label === "string" && source.label.trim() ? source.label : String(source.id),
-        position: {
-          x: Number(asObject(source.position).x ?? 0),
-          y: Number(asObject(source.position).y ?? 0),
-        },
-        meta: asObject(source.meta),
-      };
+        kind: typeof source.kind === "string" ? source.kind : undefined,
+        ui: normalizeUi(source),
+        params: asObject(source.params).constructor === Object && Object.keys(asObject(source.params)).length
+          ? asObject(source.params)
+          : asObject(source.meta).params,
+        meta: normalizeMeta(source.meta),
+      });
+
+      return created;
     }),
     edges: value.edges.map((edge) => {
       const source = asObject(edge);
-
-      if (!source.from || !source.to) {
-        throw new Error("Every edge needs from and to.");
-      }
+      const from = normalizeEndpoint(source.from, "out");
+      const to = normalizeEndpoint(source.to, inferInputPort(source));
 
       return {
-        id: String(source.id ?? `${source.from}-${source.to}`),
-        from: String(source.from),
-        to: String(source.to),
+        id: String(source.id ?? `${from.node}:${from.port}-${to.node}:${to.port}`),
+        from,
+        to,
         label: typeof source.label === "string" ? source.label : "",
         meta: asObject(source.meta),
       };
@@ -97,29 +124,37 @@ function edgeStyle(meta) {
   };
 }
 
-export function toFlowGraph(portableGraph, runtime = {}) {
+export function toFlowGraph(graph, runtime = {}) {
   return {
-    nodes: portableGraph.nodes.map((node) => ({
-      id: node.id,
-      type: "portableNode",
-      position: node.position,
-      sourcePosition: "right",
-      targetPosition: "left",
-      data: {
-        label: node.label,
-        kind: node.kind,
-        family: node.meta?.family,
-        operator: node.meta?.operator,
-        summary: runtime.nodeStates?.[node.id]?.summary ?? "",
-        swatch: runtime.nodeStates?.[node.id]?.swatch ?? null,
-        preview: runtime.nodeStates?.[node.id]?.image ?? null,
-      },
-    })),
-    edges: portableGraph.edges.map((edge) => ({
+    nodes: graph.nodes.map((node) => {
+      const visual = getNodeVisual(node);
+      return {
+        id: node.id,
+        type: "portableNode",
+        position: node.ui,
+        sourcePosition: "right",
+        targetPosition: "left",
+        data: {
+          id: node.id,
+          label: node.label,
+          kind: visual.kind,
+          graphType: node.type,
+          typeLabel: visual.typeLabel,
+          family: visual.family,
+          operator: visual.operator,
+          summary: runtime.nodeStates?.[node.id]?.summary ?? "",
+          swatch: runtime.nodeStates?.[node.id]?.swatch ?? null,
+          preview: runtime.nodeStates?.[node.id]?.image ?? null,
+        },
+      };
+    }),
+    edges: graph.edges.map((edge) => ({
       id: edge.id,
-      source: edge.from,
-      target: edge.to,
-      label: edge.label || undefined,
+      source: edge.from.node,
+      sourceHandle: edge.from.port,
+      target: edge.to.node,
+      targetHandle: edge.to.port,
+      label: edge.label || edge.to.port || undefined,
       animated: Boolean(edge.meta?.animated),
       style: edgeStyle(edge.meta),
     })),
@@ -131,17 +166,19 @@ export function fromFlowGraph(flowNodes, flowEdges, previousGraph) {
   const previousEdges = new Map(previousGraph.edges.map((edge) => [edge.id, edge]));
 
   return normalizePortableGraph({
-    schemaVersion: 1,
+    schemaVersion: previousGraph.schemaVersion ?? 2,
     title: previousGraph.title,
     nodes: flowNodes.map((node) => {
-      const previousNode = previousNodes.get(node.id);
+      const previousNode = previousNodes.get(node.id) ?? createNodeFromType("generic.process", { id: node.id });
 
       return {
         id: node.id,
-        kind: flowTypeToNodeKind(node.type, previousNode?.kind),
-        label: String(node.data?.label ?? previousNode?.label ?? node.id),
-        position: node.position,
-        meta: previousNode?.meta ?? {},
+        type: previousNode.type,
+        kind: previousNode.kind,
+        label: String(node.data?.label ?? previousNode.label ?? node.id),
+        ui: node.position,
+        params: previousNode.params,
+        meta: previousNode.meta,
       };
     }),
     edges: flowEdges.map((edge) => {
@@ -149,8 +186,14 @@ export function fromFlowGraph(flowNodes, flowEdges, previousGraph) {
 
       return {
         id: edge.id,
-        from: edge.source,
-        to: edge.target,
+        from: {
+          node: edge.source,
+          port: edge.sourceHandle ?? previousEdge?.from?.port ?? "out",
+        },
+        to: {
+          node: edge.target,
+          port: edge.targetHandle ?? previousEdge?.to?.port ?? "in",
+        },
         label: typeof edge.label === "string" ? edge.label : previousEdge?.label ?? "",
         meta: {
           ...previousEdge?.meta,

@@ -1,144 +1,130 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "title": "TouchDesigner /project1 recreation level 2",
   "nodes": [
     {
       "id": "lfo1",
+      "type": "signal.lfo",
       "kind": "process",
       "label": "lfo1",
-      "position": { "x": 80, "y": 260 },
-      "meta": {
-        "family": "CHOP",
-        "operator": "lfoCHOP",
-        "processor": "lfo",
-        "params": {
-          "waveType": "square",
-          "frequency": 0.5,
-          "offset": 0.5,
-          "amp": 0.5,
-          "phase": 0,
-          "channelName": "chan1"
-        }
-      }
+      "ui": { "x": 80, "y": 260 },
+      "params": {
+        "waveType": "square",
+        "frequency": 0.5,
+        "offset": 0.5,
+        "amp": 0.5,
+        "phase": 0,
+        "channelName": "chan1"
+      },
+      "meta": {}
     },
     {
       "id": "null_switch_ctrl",
+      "type": "generic.passthrough",
       "kind": "process",
       "label": "null_switch_ctrl",
-      "position": { "x": 280, "y": 260 },
+      "ui": { "x": 280, "y": 260 },
+      "params": {},
       "meta": {
         "family": "CHOP",
-        "operator": "nullCHOP",
-        "processor": "passthrough"
+        "operator": "nullCHOP"
       }
     },
     {
       "id": "null_switch_ctrl_export",
+      "type": "data.exportTable",
       "kind": "process",
       "label": "null_switch_ctrl_export",
-      "position": { "x": 280, "y": 80 },
-      "meta": {
-        "family": "DAT",
-        "operator": "tableDAT",
-        "processor": "exportTable",
-        "params": {
-          "targetPath": "switch1",
-          "targetParameter": "index",
-          "channelName": "chan1"
-        }
-      }
+      "ui": { "x": 280, "y": 80 },
+      "params": {
+        "targetPath": "switch1",
+        "targetParameter": "index",
+        "channelName": "chan1"
+      },
+      "meta": {}
     },
     {
       "id": "noise1",
+      "type": "image.noise",
       "kind": "process",
       "label": "noise1",
-      "position": { "x": 520, "y": 140 },
-      "meta": {
-        "family": "TOP",
-        "operator": "noiseTOP",
-        "processor": "noise",
-        "params": {
-          "type": "simplex3d",
-          "seed": 1,
-          "period": 1,
-          "harmonics": 2,
-          "spread": 2,
-          "gain": 0.7,
-          "roughness": 0.5,
-          "exponent": 1,
-          "amp": 0.5,
-          "offset": 0.5,
-          "mono": true,
-          "translateX": 0,
-          "translateY": 0,
-          "translateZSource": "time",
-          "resolutionWidth": 256,
-          "resolutionHeight": 256
-        }
-      }
+      "ui": { "x": 520, "y": 140 },
+      "params": {
+        "type": "simplex3d",
+        "seed": 1,
+        "period": 1,
+        "harmonics": 2,
+        "spread": 2,
+        "gain": 0.7,
+        "roughness": 0.5,
+        "exponent": 1,
+        "amp": 0.5,
+        "offset": 0.5,
+        "mono": true,
+        "translateX": 0,
+        "translateY": 0,
+        "translateZSource": "time",
+        "resolutionWidth": 256,
+        "resolutionHeight": 256
+      },
+      "meta": {}
     },
     {
       "id": "thresh1",
+      "type": "image.threshold",
       "kind": "process",
       "label": "thresh1",
-      "position": { "x": 760, "y": 240 },
-      "meta": {
-        "family": "TOP",
-        "operator": "thresholdTOP",
-        "processor": "threshold",
-        "params": {
-          "comparator": "less",
-          "threshold": 0.5
-        }
-      }
+      "ui": { "x": 760, "y": 240 },
+      "params": {
+        "comparator": "less",
+        "threshold": 0.5
+      },
+      "meta": {}
     },
     {
       "id": "thresh2",
+      "type": "image.threshold",
       "kind": "process",
       "label": "thresh2",
-      "position": { "x": 760, "y": 40 },
-      "meta": {
-        "family": "TOP",
-        "operator": "thresholdTOP",
-        "processor": "threshold",
-        "params": {
-          "comparator": "greater",
-          "threshold": 0.5
-        }
-      }
+      "ui": { "x": 760, "y": 40 },
+      "params": {
+        "comparator": "greater",
+        "threshold": 0.5
+      },
+      "meta": {}
     },
     {
       "id": "switch1",
+      "type": "logic.switch",
       "kind": "process",
       "label": "switch1",
-      "position": { "x": 1000, "y": 140 },
-      "meta": {
-        "family": "TOP",
-        "operator": "switchTOP",
-        "processor": "switch"
-      }
+      "ui": { "x": 1000, "y": 140 },
+      "params": {},
+      "meta": {}
     },
     {
       "id": "null_img_out",
+      "type": "generic.exit",
       "kind": "exit",
       "label": "null_img_out",
-      "position": { "x": 1250, "y": 140 },
+      "ui": { "x": 1250, "y": 140 },
+      "params": {},
       "meta": {
         "family": "TOP",
         "operator": "nullTOP",
-        "processor": "passthrough",
         "primaryOutput": true
       }
     },
     {
       "id": "TouchDesignerAPI",
+      "type": "generic.note",
       "kind": "note",
       "label": "TouchDesignerAPI",
-      "position": { "x": 60, "y": 430 },
+      "ui": { "x": 60, "y": 430 },
+      "params": {},
       "meta": {
         "family": "COMP",
         "operator": "baseCOMP",
-        "processor": "annotation",
         "notes": "MCP bridge component in the running TouchDesigner project."
       }
     }
@@ -146,8 +132,8 @@
   "edges": [
     {
       "id": "lfo1-null_switch_ctrl",
-      "from": "lfo1",
-      "to": "null_switch_ctrl",
+      "from": { "node": "lfo1", "port": "signal" },
+      "to": { "node": "null_switch_ctrl", "port": "in" },
       "label": "chan1",
       "meta": {
         "dataType": "signal",
@@ -156,19 +142,18 @@
     },
     {
       "id": "null_switch_ctrl-switch1",
-      "from": "null_switch_ctrl",
-      "to": "switch1",
+      "from": { "node": "null_switch_ctrl", "port": "out" },
+      "to": { "node": "switch1", "port": "index" },
       "label": "index",
       "meta": {
         "dataType": "signal",
-        "targetPort": "index",
         "animated": true
       }
     },
     {
       "id": "null_switch_ctrl-null_switch_ctrl_export",
-      "from": "null_switch_ctrl",
-      "to": "null_switch_ctrl_export",
+      "from": { "node": "null_switch_ctrl", "port": "out" },
+      "to": { "node": "null_switch_ctrl_export", "port": "in" },
       "label": "export",
       "meta": {
         "dataType": "signal",
@@ -177,8 +162,8 @@
     },
     {
       "id": "noise1-thresh1",
-      "from": "noise1",
-      "to": "thresh1",
+      "from": { "node": "noise1", "port": "image" },
+      "to": { "node": "thresh1", "port": "in" },
       "label": "image",
       "meta": {
         "dataType": "image"
@@ -186,8 +171,8 @@
     },
     {
       "id": "noise1-thresh2",
-      "from": "noise1",
-      "to": "thresh2",
+      "from": { "node": "noise1", "port": "image" },
+      "to": { "node": "thresh2", "port": "in" },
       "label": "image",
       "meta": {
         "dataType": "image"
@@ -195,28 +180,26 @@
     },
     {
       "id": "thresh1-switch1",
-      "from": "thresh1",
-      "to": "switch1",
+      "from": { "node": "thresh1", "port": "image" },
+      "to": { "node": "switch1", "port": "input0" },
       "label": "input0",
       "meta": {
-        "dataType": "image",
-        "targetSlot": 0
+        "dataType": "image"
       }
     },
     {
       "id": "thresh2-switch1",
-      "from": "thresh2",
-      "to": "switch1",
+      "from": { "node": "thresh2", "port": "image" },
+      "to": { "node": "switch1", "port": "input1" },
       "label": "input1",
       "meta": {
-        "dataType": "image",
-        "targetSlot": 1
+        "dataType": "image"
       }
     },
     {
       "id": "switch1-null_img_out",
-      "from": "switch1",
-      "to": "null_img_out",
+      "from": { "node": "switch1", "port": "image" },
+      "to": { "node": "null_img_out", "port": "in" },
       "label": "image",
       "meta": {
         "dataType": "image"

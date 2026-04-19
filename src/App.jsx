@@ -13,9 +13,14 @@ import "@xyflow/react/dist/style.css";
 import sampleGraph from "../graphs/sample.graph.json";
 import tdProjectGraph from "../graphs/touchdesigner-project1.graph.json";
 import tdProjectGraphLevel2 from "../graphs/touchdesigner-project1-level2.graph.json";
-import GraphNode from "./components/GraphNode";
-import ImagePreview from "./components/ImagePreview";
-import { evaluateGraph } from "./lib/dataflowEngine";
+import GraphNode from "./components/GraphNode.jsx";
+import ImagePreview from "./components/ImagePreview.jsx";
+import { evaluateGraph } from "./lib/dataflowEngine.js";
+import {
+  createNodeFromType,
+  getNodeVisual,
+  listNodeTemplates,
+} from "./lib/nodeRegistry.js";
 import {
   fromFlowGraph,
   nextNodeId,
@@ -23,13 +28,14 @@ import {
   toDownloadName,
   toFlowGraph,
   toJson,
-} from "./lib/portableGraph";
+} from "./lib/portableGraph.js";
 
-const STORAGE_KEY = "react-flow-test.portable-graph.v2";
-const DEFAULT_GRAPH = tdProjectGraphLevel2;
+const STORAGE_KEY = "react-flow-test.portable-graph.v3";
+const DEFAULT_GRAPH = sampleGraph;
 const nodeTypes = {
   portableNode: GraphNode,
 };
+const templates = listNodeTemplates();
 
 function loadGraph() {
   const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -55,19 +61,22 @@ export default function App() {
   const fileInputRef = useRef(null);
   const simulation = useMemo(() => evaluateGraph(graph, elapsedMs / 1000), [elapsedMs, graph]);
   const flowGraph = useMemo(() => toFlowGraph(graph, simulation), [graph, simulation]);
-  const outputImage = simulation.primaryOutput?.image ?? null;
 
   useEffect(() => {
     if (!isPlaying) {
       return undefined;
     }
 
+    let frameId = 0;
     const startedAt = performance.now() - elapsedMs;
-    const interval = window.setInterval(() => {
-      setElapsedMs(performance.now() - startedAt);
-    }, 100);
 
-    return () => window.clearInterval(interval);
+    const tick = () => {
+      setElapsedMs(performance.now() - startedAt);
+      frameId = window.requestAnimationFrame(tick);
+    };
+
+    frameId = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(frameId);
   }, [elapsedMs, isPlaying]);
 
   const persist = useCallback((nextGraph) => {
@@ -103,43 +112,40 @@ export default function App() {
         flowGraph.edges,
       );
       persist(fromFlowGraph(flowGraph.nodes, nextEdges, graph));
+      setStatus("Connected nodes");
     },
     [flowGraph.edges, flowGraph.nodes, graph, persist],
   );
 
-  const addNode = useCallback(() => {
-    const id = nextNodeId(graph.nodes);
-    const nextGraph = normalizePortableGraph({
-      ...graph,
-      nodes: [
-        ...graph.nodes,
-        {
-          id,
-          kind: "process",
-          label: `Node ${graph.nodes.length + 1}`,
-          position: {
-            x: 160 + graph.nodes.length * 40,
-            y: 80 + graph.nodes.length * 28,
-          },
-          meta: {
-            family: "GENERIC",
-            operator: "process",
-            processor: "passthrough",
-          },
-        },
-      ],
-    });
+  const addNodeFromType = useCallback(
+    (type) => {
+      const id = nextNodeId(graph.nodes);
+      const nextGraph = normalizePortableGraph({
+        ...graph,
+        nodes: [
+          ...graph.nodes,
+          createNodeFromType(type, {
+            id,
+            ui: {
+              x: 140 + graph.nodes.length * 36,
+              y: 80 + graph.nodes.length * 24,
+            },
+          }),
+        ],
+      });
 
-    persist(nextGraph);
-    setSelectedNodeId(id);
-    setStatus(`Added ${id}`);
-  }, [graph, persist]);
+      persist(nextGraph);
+      setSelectedNodeId(id);
+      setStatus(`Added ${type}`);
+    },
+    [graph, persist],
+  );
 
   const resetGraph = useCallback(() => {
     persist(normalizePortableGraph(DEFAULT_GRAPH));
     setSelectedNodeId(null);
     setElapsedMs(0);
-    setStatus("Reset to sample graph");
+    setStatus("Reset to default graph");
   }, [persist]);
 
   const applyJson = useCallback(() => {
@@ -154,8 +160,7 @@ export default function App() {
   }, [jsonText, persist]);
 
   const syncJson = useCallback(() => {
-    const text = toJson(graph);
-    setJsonText(text);
+    setJsonText(toJson(graph));
     setStatus("Synced JSON");
   }, [graph]);
 
@@ -213,22 +218,18 @@ export default function App() {
     [graph.nodes, selectedNodeId],
   );
   const selectedState = selectedNode ? simulation.nodeStates[selectedNode.id] : null;
-  const exportTable = simulation.nodeStates.null_switch_ctrl_export?.text ?? "";
-  const switchState = simulation.nodeStates.switch1?.summary ?? "n/a";
-  const lfoState = simulation.nodeStates.lfo1?.summary ?? "n/a";
-  const selectedInputIndex = simulation.nodeStates.switch1?.selectedIndex ?? 0;
-  const sourcePreviews = [
-    {
-      id: "thresh1",
-      label: "input0",
-      image: simulation.nodeStates.thresh1?.image ?? null,
-    },
-    {
-      id: "thresh2",
-      label: "input1",
-      image: simulation.nodeStates.thresh2?.image ?? null,
-    },
-  ];
+  const selectedVisual = selectedNode ? getNodeVisual(selectedNode) : null;
+  const primaryOutputLabel = simulation.primaryOutputNode?.label ?? "Primary output";
+  const primaryOutputSummary = simulation.primaryOutput?.summary ?? "no output";
+  const outputImage = simulation.primaryOutput?.image ?? null;
+  const firstSignalNode = graph.nodes.find((node) => simulation.nodeStates[node.id]?.valueType === "signal") ?? null;
+  const firstSignalSummary = firstSignalNode ? simulation.nodeStates[firstSignalNode.id]?.summary : "n/a";
+  const firstSwitchNode = graph.nodes.find((node) => node.type === "logic.switch") ?? null;
+  const firstSwitchState = firstSwitchNode ? simulation.nodeStates[firstSwitchNode.id] : null;
+  const switchSummary = firstSwitchState?.summary ?? "n/a";
+  const sourcePreviews = firstSwitchState?.inputStates ?? [];
+  const firstTableNode = graph.nodes.find((node) => simulation.nodeStates[node.id]?.valueType === "table") ?? null;
+  const exportTable = firstTableNode ? simulation.nodeStates[firstTableNode.id]?.text ?? "" : "";
 
   const updateSelectedLabel = useCallback(
     (label) => {
@@ -254,23 +255,40 @@ export default function App() {
     <div className="app-shell">
       <aside className="sidebar">
         <div className="sidebar-section">
-          <h1>Graph Playground</h1>
-          <p>TouchDesigner の小さな dataflow を graph JSON と React Flow で再現する実験場。</p>
+          <h1>Typed Graph Playground</h1>
+          <p>graph document, node registry, runtime を分けて汎用システムへ寄せる実験場。</p>
+        </div>
+
+        <div className="sidebar-section">
+          <div className="section-heading">Presets</div>
+          <div className="button-row">
+            <button type="button" onClick={() => loadPreset(sampleGraph, "generic sample")}>
+              Load sample
+            </button>
+            <button type="button" onClick={() => loadPreset(tdProjectGraph, "TD level1")}>
+              Load TD L1
+            </button>
+            <button type="button" onClick={() => loadPreset(tdProjectGraphLevel2, "TD level2")}>
+              Load TD L2
+            </button>
+            <button type="button" className="secondary" onClick={resetGraph}>
+              Reset
+            </button>
+          </div>
+        </div>
+
+        <div className="sidebar-section">
+          <div className="section-heading">Templates</div>
+          <div className="template-grid">
+            {templates.map((template) => (
+              <button key={template.type} type="button" className="secondary template-button" onClick={() => addNodeFromType(template.type)}>
+                {template.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="sidebar-section button-row">
-          <button type="button" onClick={() => loadPreset(tdProjectGraph, "TD /project1 preset")}>
-            Load TD L1
-          </button>
-          <button type="button" onClick={() => loadPreset(tdProjectGraphLevel2, "TD /project1 level2")}>
-            Load TD L2
-          </button>
-          <button type="button" onClick={() => loadPreset(sampleGraph, "basic sample")}>
-            Load sample
-          </button>
-          <button type="button" onClick={addNode}>
-            Add node
-          </button>
           <button type="button" onClick={downloadJson}>
             Download JSON
           </button>
@@ -282,9 +300,6 @@ export default function App() {
           </button>
           <button type="button" onClick={syncJson}>
             Sync text
-          </button>
-          <button type="button" className="secondary" onClick={resetGraph}>
-            Reset
           </button>
           <input
             ref={fileInputRef}
@@ -315,27 +330,33 @@ export default function App() {
           <div className="runtime-grid">
             <div>Time</div>
             <div>{(elapsedMs / 1000).toFixed(1)}s</div>
-            <div>LFO</div>
-            <div>{lfoState}</div>
+            <div>Signal</div>
+            <div>{firstSignalSummary}</div>
             <div>Switch</div>
-            <div>{switchState}</div>
+            <div>{switchSummary}</div>
           </div>
           <div className="viewer-card">
-            <div className="viewer-card__label">null_img_out</div>
-            <ImagePreview image={outputImage} className="viewer-surface" />
+            <div className="viewer-card__label">{primaryOutputLabel}</div>
+            <ImagePreview image={outputImage} className="viewer-surface" emptyLabel="No image output" />
+            <div className="viewer-caption">{primaryOutputSummary}</div>
           </div>
-          <div className="source-strip">
-            {sourcePreviews.map((source, index) => (
-              <div
-                key={source.id}
-                className={`source-chip ${selectedInputIndex === index ? "source-chip--active" : ""}`}
-              >
-                <ImagePreview image={source.image} className="source-chip__preview" />
-                <div>{source.label}</div>
-              </div>
-            ))}
-          </div>
-          <pre className="export-table">{exportTable}</pre>
+          {sourcePreviews.length ? (
+            <div className="source-strip">
+              {sourcePreviews.map((source) => (
+                <div
+                  key={`${source.nodeId}-${source.port}`}
+                  className={`source-chip ${firstSwitchState?.selectedIndex === source.index ? "source-chip--active" : ""}`}
+                >
+                  <ImagePreview image={source.image} className="source-chip__preview" emptyLabel="No image" />
+                  <div>
+                    <div>{source.port}</div>
+                    <div className="source-chip__summary">{source.nodeId}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
+          {exportTable ? <pre className="export-table">{exportTable}</pre> : null}
         </div>
 
         <div className="sidebar-section">
@@ -365,7 +386,7 @@ export default function App() {
             <div className="node-editor">
               <div className="node-meta">{selectedNode.id}</div>
               <div className="node-meta">
-                {[selectedNode.meta?.family, selectedNode.meta?.operator].filter(Boolean).join(" / ")}
+                {[selectedNode.type, selectedVisual?.family, selectedVisual?.operator].filter(Boolean).join(" / ")}
               </div>
               <input
                 type="text"
@@ -398,13 +419,13 @@ export default function App() {
           <Controls />
           <Background gap={16} />
           <Panel position="top-left" className="flow-tip">
-            TD recreation / v{graph.schemaVersion}
+            Typed graph / v{graph.schemaVersion}
           </Panel>
           <Panel position="top-right" className="viewer-overlay">
             <div className="viewer-card viewer-card--overlay">
-              <div className="viewer-card__label">TOP Viewer</div>
-              <ImagePreview image={outputImage} className="viewer-surface viewer-surface--overlay" />
-              <div className="viewer-caption">{switchState}</div>
+              <div className="viewer-card__label">{primaryOutputLabel}</div>
+              <ImagePreview image={outputImage} className="viewer-surface viewer-surface--overlay" emptyLabel="No image output" />
+              <div className="viewer-caption">{primaryOutputSummary}</div>
             </div>
           </Panel>
         </ReactFlow>

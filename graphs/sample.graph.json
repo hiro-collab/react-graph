@@ -1,50 +1,68 @@
 {
-  "schemaVersion": 1,
-  "title": "Codex Structure Map",
+  "schemaVersion": 2,
+  "title": "Generic System Map",
   "nodes": [
     {
-      "id": "idea",
+      "id": "source",
+      "type": "generic.entry",
       "kind": "entry",
-      "label": "Idea",
-      "position": { "x": 80, "y": 160 },
+      "label": "Input",
+      "ui": { "x": 80, "y": 180 },
+      "params": {},
       "meta": {
-        "notes": "Start from a prompt, a file, or a rough concept."
+        "notes": "Start from a prompt, event, file, or sensor."
       }
     },
     {
-      "id": "interpret",
+      "id": "process",
+      "type": "generic.process",
       "kind": "process",
-      "label": "Interpret",
-      "position": { "x": 360, "y": 160 },
+      "label": "Process",
+      "ui": { "x": 360, "y": 180 },
+      "params": {},
       "meta": {
-        "notes": "Turn raw input into a model or decision."
+        "notes": "Transform the incoming value."
       }
     },
     {
-      "id": "action",
+      "id": "output",
+      "type": "generic.exit",
       "kind": "exit",
-      "label": "Action",
-      "position": { "x": 640, "y": 160 },
+      "label": "Output",
+      "ui": { "x": 640, "y": 180 },
+      "params": {},
       "meta": {
-        "notes": "Emit a response, commit, patch, or file."
+        "notes": "Expose the result."
+      }
+    },
+    {
+      "id": "note",
+      "type": "generic.note",
+      "kind": "note",
+      "label": "Note",
+      "ui": { "x": 340, "y": 40 },
+      "params": {},
+      "meta": {
+        "notes": "This document is editor-friendly and runtime-agnostic."
       }
     }
   ],
   "edges": [
     {
-      "id": "idea-interpret",
-      "from": "idea",
-      "to": "interpret",
-      "label": "prompt",
+      "id": "source-process",
+      "from": { "node": "source", "port": "out" },
+      "to": { "node": "process", "port": "in" },
+      "label": "data",
       "meta": {
         "animated": true
       }
     },
     {
-      "id": "interpret-action",
-      "from": "interpret",
-      "to": "action",
-      "label": "decision"
+      "id": "process-output",
+      "from": { "node": "process", "port": "out" },
+      "to": { "node": "output", "port": "in" },
+      "label": "result",
+      "meta": {}
     }
   ]
 }

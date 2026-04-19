@@ -1,5 +1,5 @@
 import { Handle, Position } from "@xyflow/react";
-import ImagePreview from "./ImagePreview";
+import ImagePreview from "./ImagePreview.jsx";
 
 export default function GraphNode({ data }) {
   const isNote = data.kind === "note";
@@ -13,7 +13,7 @@ export default function GraphNode({ data }) {
         <div className="graph-node__text">
           <div className="graph-node__title">{data.label}</div>
           <div className="graph-node__subtitle">
-            {[data.family, data.operator].filter(Boolean).join(" / ")}
+            {[data.typeLabel, data.family, data.operator].filter(Boolean).join(" / ")}
           </div>
         </div>
         {data.swatch ? <div className="graph-node__swatch" style={{ background: data.swatch }} /> : null}

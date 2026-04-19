@@ -1,121 +1,98 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "title": "TouchDesigner /project1 recreation",
   "nodes": [
     {
       "id": "lfo1",
+      "type": "signal.lfo",
       "kind": "process",
       "label": "lfo1",
-      "position": { "x": 80, "y": 240 },
-      "meta": {
-        "family": "CHOP",
-        "operator": "lfoCHOP",
-        "processor": "lfo",
-        "params": {
-          "waveType": "square",
-          "frequency": 0.5,
-          "offset": 0.5,
-          "amp": 0.5,
-          "phase": 0
-        }
-      }
+      "ui": { "x": 80, "y": 180 },
+      "params": {
+        "waveType": "square",
+        "frequency": 0.5,
+        "offset": 0.5,
+        "amp": 0.5,
+        "phase": 0,
+        "channelName": "chan1"
+      },
+      "meta": {}
     },
     {
       "id": "null_switch_ctrl",
+      "type": "generic.passthrough",
       "kind": "process",
       "label": "null_switch_ctrl",
-      "position": { "x": 280, "y": 240 },
+      "ui": { "x": 280, "y": 180 },
+      "params": {},
       "meta": {
         "family": "CHOP",
-        "operator": "nullCHOP",
-        "processor": "passthrough"
+        "operator": "nullCHOP"
       }
     },
     {
       "id": "null_switch_ctrl_export",
+      "type": "data.exportTable",
       "kind": "process",
       "label": "null_switch_ctrl_export",
-      "position": { "x": 280, "y": 80 },
-      "meta": {
-        "family": "DAT",
-        "operator": "tableDAT",
-        "processor": "exportTable",
-        "params": {
-          "targetPath": "switch1",
-          "targetParameter": "index",
-          "channelName": "chan1"
-        }
-      }
+      "ui": { "x": 280, "y": 40 },
+      "params": {
+        "targetPath": "switch1",
+        "targetParameter": "index",
+        "channelName": "chan1"
+      },
+      "meta": {}
     },
     {
       "id": "constant1",
+      "type": "image.constant",
       "kind": "entry",
       "label": "constant1",
-      "position": { "x": 480, "y": 240 },
-      "meta": {
-        "family": "TOP",
-        "operator": "constantTOP",
-        "processor": "constantColor",
-        "params": {
-          "color": [255, 0, 0, 255]
-        }
-      }
+      "ui": { "x": 500, "y": 220 },
+      "params": {
+        "color": [255, 0, 0, 255]
+      },
+      "meta": {}
     },
     {
       "id": "constant2",
+      "type": "image.constant",
       "kind": "entry",
       "label": "constant2",
-      "position": { "x": 480, "y": 80 },
-      "meta": {
-        "family": "TOP",
-        "operator": "constantTOP",
-        "processor": "constantColor",
-        "params": {
-          "color": [0, 255, 0, 255]
-        }
-      }
+      "ui": { "x": 500, "y": 80 },
+      "params": {
+        "color": [0, 255, 0, 255]
+      },
+      "meta": {}
     },
     {
       "id": "switch1",
+      "type": "logic.switch",
       "kind": "process",
       "label": "switch1",
-      "position": { "x": 720, "y": 180 },
-      "meta": {
-        "family": "TOP",
-        "operator": "switchTOP",
-        "processor": "switch"
-      }
+      "ui": { "x": 760, "y": 150 },
+      "params": {},
+      "meta": {}
     },
     {
       "id": "null_img_out",
+      "type": "generic.exit",
       "kind": "exit",
       "label": "null_img_out",
-      "position": { "x": 980, "y": 180 },
+      "ui": { "x": 1020, "y": 150 },
+      "params": {},
       "meta": {
         "family": "TOP",
         "operator": "nullTOP",
-        "processor": "passthrough",
         "primaryOutput": true
-      }
-    },
-    {
-      "id": "TouchDesignerAPI",
-      "kind": "note",
-      "label": "TouchDesignerAPI",
-      "position": { "x": 40, "y": 420 },
-      "meta": {
-        "family": "COMP",
-        "operator": "baseCOMP",
-        "processor": "annotation",
-        "notes": "MCP bridge component present in the running TouchDesigner project."
       }
     }
   ],
   "edges": [
     {
       "id": "lfo1-null_switch_ctrl",
-      "from": "lfo1",
-      "to": "null_switch_ctrl",
+      "from": { "node": "lfo1", "port": "signal" },
+      "to": { "node": "null_switch_ctrl", "port": "in" },
       "label": "chan1",
       "meta": {
         "dataType": "signal",
@@ -124,19 +101,18 @@
     },
     {
       "id": "null_switch_ctrl-switch1",
-      "from": "null_switch_ctrl",
-      "to": "switch1",
+      "from": { "node": "null_switch_ctrl", "port": "out" },
+      "to": { "node": "switch1", "port": "index" },
       "label": "index",
       "meta": {
         "dataType": "signal",
-        "targetPort": "index",
         "animated": true
       }
     },
     {
       "id": "null_switch_ctrl-null_switch_ctrl_export",
-      "from": "null_switch_ctrl",
-      "to": "null_switch_ctrl_export",
+      "from": { "node": "null_switch_ctrl", "port": "out" },
+      "to": { "node": "null_switch_ctrl_export", "port": "in" },
       "label": "export",
       "meta": {
         "dataType": "signal",
@@ -145,28 +121,26 @@
     },
     {
       "id": "constant1-switch1",
-      "from": "constant1",
-      "to": "switch1",
+      "from": { "node": "constant1", "port": "image" },
+      "to": { "node": "switch1", "port": "input0" },
       "label": "input0",
       "meta": {
-        "dataType": "image",
-        "targetSlot": 0
+        "dataType": "image"
       }
     },
     {
       "id": "constant2-switch1",
-      "from": "constant2",
-      "to": "switch1",
+      "from": { "node": "constant2", "port": "image" },
+      "to": { "node": "switch1", "port": "input1" },
       "label": "input1",
       "meta": {
-        "dataType": "image",
-        "targetSlot": 1
+        "dataType": "image"
       }
     },
     {
       "id": "switch1-null_img_out",
-      "from": "switch1",
-      "to": "null_img_out",
+      "from": { "node": "switch1", "port": "image" },
+      "to": { "node": "null_img_out", "port": "in" },
       "label": "image",
       "meta": {
         "dataType": "image"
