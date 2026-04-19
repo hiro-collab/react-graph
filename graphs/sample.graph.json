@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "title": "Codex Structure Map",
+  "nodes": [
+    {
+      "id": "idea",
+      "kind": "entry",
+      "label": "Idea",
+      "position": { "x": 80, "y": 160 },
+      "meta": {
+        "notes": "Start from a prompt, a file, or a rough concept."
+      }
+    },
+    {
+      "id": "interpret",
+      "kind": "process",
+      "label": "Interpret",
+      "position": { "x": 360, "y": 160 },
+      "meta": {
+        "notes": "Turn raw input into a model or decision."
+      }
+    },
+    {
+      "id": "action",
+      "kind": "exit",
+      "label": "Action",
+      "position": { "x": 640, "y": 160 },
+      "meta": {
+        "notes": "Emit a response, commit, patch, or file."
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "idea-interpret",
+      "from": "idea",
+      "to": "interpret",
+      "label": "prompt",
+      "meta": {
+        "animated": true
+      }
+    },
+    {
+      "id": "interpret-action",
+      "from": "interpret",
+      "to": "action",
+      "label": "decision"
+    }
+  ]
+}

@@ -1,0 +1,226 @@
+{
+  "schemaVersion": 1,
+  "title": "TouchDesigner /project1 recreation level 2",
+  "nodes": [
+    {
+      "id": "lfo1",
+      "kind": "process",
+      "label": "lfo1",
+      "position": { "x": 80, "y": 260 },
+      "meta": {
+        "family": "CHOP",
+        "operator": "lfoCHOP",
+        "processor": "lfo",
+        "params": {
+          "waveType": "square",
+          "frequency": 0.5,
+          "offset": 0.5,
+          "amp": 0.5,
+          "phase": 0,
+          "channelName": "chan1"
+        }
+      }
+    },
+    {
+      "id": "null_switch_ctrl",
+      "kind": "process",
+      "label": "null_switch_ctrl",
+      "position": { "x": 280, "y": 260 },
+      "meta": {
+        "family": "CHOP",
+        "operator": "nullCHOP",
+        "processor": "passthrough"
+      }
+    },
+    {
+      "id": "null_switch_ctrl_export",
+      "kind": "process",
+      "label": "null_switch_ctrl_export",
+      "position": { "x": 280, "y": 80 },
+      "meta": {
+        "family": "DAT",
+        "operator": "tableDAT",
+        "processor": "exportTable",
+        "params": {
+          "targetPath": "switch1",
+          "targetParameter": "index",
+          "channelName": "chan1"
+        }
+      }
+    },
+    {
+      "id": "noise1",
+      "kind": "process",
+      "label": "noise1",
+      "position": { "x": 520, "y": 140 },
+      "meta": {
+        "family": "TOP",
+        "operator": "noiseTOP",
+        "processor": "noise",
+        "params": {
+          "type": "simplex3d",
+          "seed": 1,
+          "period": 1,
+          "harmonics": 2,
+          "spread": 2,
+          "gain": 0.7,
+          "roughness": 0.5,
+          "exponent": 1,
+          "amp": 0.5,
+          "offset": 0.5,
+          "mono": true,
+          "translateX": 0,
+          "translateY": 0,
+          "translateZSource": "time",
+          "resolutionWidth": 256,
+          "resolutionHeight": 256
+        }
+      }
+    },
+    {
+      "id": "thresh1",
+      "kind": "process",
+      "label": "thresh1",
+      "position": { "x": 760, "y": 240 },
+      "meta": {
+        "family": "TOP",
+        "operator": "thresholdTOP",
+        "processor": "threshold",
+        "params": {
+          "comparator": "less",
+          "threshold": 0.5
+        }
+      }
+    },
+    {
+      "id": "thresh2",
+      "kind": "process",
+      "label": "thresh2",
+      "position": { "x": 760, "y": 40 },
+      "meta": {
+        "family": "TOP",
+        "operator": "thresholdTOP",
+        "processor": "threshold",
+        "params": {
+          "comparator": "greater",
+          "threshold": 0.5
+        }
+      }
+    },
+    {
+      "id": "switch1",
+      "kind": "process",
+      "label": "switch1",
+      "position": { "x": 1000, "y": 140 },
+      "meta": {
+        "family": "TOP",
+        "operator": "switchTOP",
+        "processor": "switch"
+      }
+    },
+    {
+      "id": "null_img_out",
+      "kind": "exit",
+      "label": "null_img_out",
+      "position": { "x": 1250, "y": 140 },
+      "meta": {
+        "family": "TOP",
+        "operator": "nullTOP",
+        "processor": "passthrough",
+        "primaryOutput": true
+      }
+    },
+    {
+      "id": "TouchDesignerAPI",
+      "kind": "note",
+      "label": "TouchDesignerAPI",
+      "position": { "x": 60, "y": 430 },
+      "meta": {
+        "family": "COMP",
+        "operator": "baseCOMP",
+        "processor": "annotation",
+        "notes": "MCP bridge component in the running TouchDesigner project."
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "lfo1-null_switch_ctrl",
+      "from": "lfo1",
+      "to": "null_switch_ctrl",
+      "label": "chan1",
+      "meta": {
+        "dataType": "signal",
+        "animated": true
+      }
+    },
+    {
+      "id": "null_switch_ctrl-switch1",
+      "from": "null_switch_ctrl",
+      "to": "switch1",
+      "label": "index",
+      "meta": {
+        "dataType": "signal",
+        "targetPort": "index",
+        "animated": true
+      }
+    },
+    {
+      "id": "null_switch_ctrl-null_switch_ctrl_export",
+      "from": "null_switch_ctrl",
+      "to": "null_switch_ctrl_export",
+      "label": "export",
+      "meta": {
+        "dataType": "signal",
+        "animated": true
+      }
+    },
+    {
+      "id": "noise1-thresh1",
+      "from": "noise1",
+      "to": "thresh1",
+      "label": "image",
+      "meta": {
+        "dataType": "image"
+      }
+    },
+    {
+      "id": "noise1-thresh2",
+      "from": "noise1",
+      "to": "thresh2",
+      "label": "image",
+      "meta": {
+        "dataType": "image"
+      }
+    },
+    {
+      "id": "thresh1-switch1",
+      "from": "thresh1",
+      "to": "switch1",
+      "label": "input0",
+      "meta": {
+        "dataType": "image",
+        "targetSlot": 0
+      }
+    },
+    {
+      "id": "thresh2-switch1",
+      "from": "thresh2",
+      "to": "switch1",
+      "label": "input1",
+      "meta": {
+        "dataType": "image",
+        "targetSlot": 1
+      }
+    },
+    {
+      "id": "switch1-null_img_out",
+      "from": "switch1",
+      "to": "null_img_out",
+      "label": "image",
+      "meta": {
+        "dataType": "image"
+      }
+    }
+  ]
+}
